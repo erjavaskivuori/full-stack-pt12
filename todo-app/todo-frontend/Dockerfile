@@ -2,16 +2,20 @@ FROM node:20 AS build-stage
 
 WORKDIR /usr/src/app
 
-COPY . .
+COPY ./todo-frontend .
 
 RUN npm ci
 
 RUN npm run test
 
-ENV VITE_BACKEND_URL=http://localhost:3000
+ARG VITE_BACKEND_URL=/api
+ENV VITE_BACKEND_URL=$VITE_BACKEND_URL
 
 RUN npm run build
 
 FROM nginx:1.25-alpine
 
+EXPOSE 80
+
 COPY --from=build-stage /usr/src/app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/nginx.conf
