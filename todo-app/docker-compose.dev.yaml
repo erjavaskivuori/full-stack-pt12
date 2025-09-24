@@ -5,15 +5,32 @@ services:
       context: ./todo-frontend
       dockerfile: dev.Dockerfile
     environment:
-      - VITE_BACKEND_URL=http://localhost:3000
+      - VITE_BACKEND_URL=/api
     volumes:
       - ./todo-frontend:/usr/src/app
       # Prevents overwriting node_modules in the container
       # This is necessary when using mac and linux containers together
       - /usr/src/app/node_modules
-    ports:
-      - 5173:5173
     container_name: todo-frontend-dev
+
+  todo-backend:
+    image: todo-express-backend-dev
+    build:
+      context: ./todo-backend
+      dockerfile: dev.Dockerfile
+    environment:
+      - MONGO_URL=mongodb://the_username:the_password@mongo:27017/the_database
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - ./todo-backend:/usr/src/app
+      # Prevents overwriting node_modules in the container
+      # This is necessary when using mac and linux containers together
+      - /usr/src/app/node_modules
+    container_name: todo-express-backend-dev
+    depends_on:
+      - mongo
+      - redis
+
   nginx:
     image: nginx:latest
     ports:
@@ -23,3 +40,24 @@ services:
     container_name: reverse-proxy
     depends_on:
       - app
+      - todo-backend
+
+  mongo:
+    image: mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+      MONGO_INITDB_DATABASE: the_database
+    volumes:
+      - ./todo-backend/mongo/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
+      - mongo_data:/data/db
+
+  redis:
+    image: redis
+    command: ['redis-server', '--appendonly', 'yes'] 
+    volumes:
+      - redis_data:/data
+
+volumes:
+  mongo_data:
+  redis_data:
